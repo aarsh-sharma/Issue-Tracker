@@ -40,7 +40,7 @@ class Ticket(models.Model):
         'Subject', max_length=100,
     )
     details = models.CharField(
-        'Details', max_length=500
+        'Details', max_length=500,
     )
     severity = models.IntegerField(
         'Severity', choices=SEVERITY_LEVELS,
@@ -95,3 +95,7 @@ class TicketComments(models.Model):
     body = models.CharField(
         'Body', max_length=1000,
     )
+
+    class Meta:
+        verbose_name = 'TicketComment'
+        verbose_name_plural = 'TicketComments'

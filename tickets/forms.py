@@ -34,7 +34,7 @@ class TicketUpdateForm(forms.ModelForm):
         fields = ['state', 'severity', 'issue_type', 'details', 'assigned_to']
 
 
-class LogEntryForm(forms.Form):
+class CommentForm(forms.Form):
     body = forms.CharField(widget=forms.Textarea, required=False, label='')
 
     def clean_body(self):

@@ -6,6 +6,8 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages  # import messages
 from django.contrib.auth.forms import AuthenticationForm
 
+from .forms import CreateTicketForm, TicketUpdateForm, CommentForm
+
 # Create your views here.
 
 def index(request):
@@ -16,6 +18,31 @@ def index(request):
 def listTickets(request):
 
     return render(request, 'list.html')
+
+def createTicket(request):
+    if (request.user.is_authenticated):
+        if request.method == "POST":
+            form = CreateTicketForm(request.POST)
+            if (form.is_valid()):
+                t = form.save(commit=False)
+                t.created_by = request.user
+                t.save()
+                # print(form.cleaned_data)
+                return redirect('/ticket/' + str(t.id))
+            else:
+                messages.warning(request, "There was some problem with the form data.")
+                return redirect('/create')
+
+        else:
+            form = CreateTicketForm()
+
+        return render(request, 'create.html', {'form': form})
+
+    messages.warning(request, "You need to be logged in to create a ticket.")
+    return redirect('/login')
+
+def ticketDetail(request, tid):
+    return HttpResponse('This is the ticket view for ticket with id ' + str(tid))
 
 def registerUser(request):
     if request.method == "POST":
@@ -49,7 +76,7 @@ def loginUser(request):
     return render(request=request, template_name="login.html", context={"login_form":form})
 
 def logoutUser(request):
-    # logout(request)
-    messages.error(request, "You have successfully logged out.")
+    logout(request)
+    messages.info(request, "You have successfully logged out.")
     return redirect("/")
 

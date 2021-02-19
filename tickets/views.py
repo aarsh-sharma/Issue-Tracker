@@ -5,8 +5,15 @@ from .forms import NewUserForm
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages  # import messages
 from django.contrib.auth.forms import AuthenticationForm
+from django.core.paginator import Paginator
+from django.db.models import Q
+
+import timeago
+from dateutil import tz
+from datetime import datetime, timezone
 
 from .forms import CreateTicketForm, TicketUpdateForm, CommentForm
+from .models import Ticket
 
 # Create your views here.
 
@@ -17,7 +24,26 @@ def index(request):
 
 def listTickets(request):
 
-    return render(request, 'list.html')
+    if not request.user.is_authenticated:
+        messages.warning(request, "You need to be logged in to view the list")
+        return redirect('/login')
+
+    page = request.GET.get('page', 1)
+    ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by('-created_at')
+    paginator = Paginator(ticket_list, 10)
+    page_obj = paginator.get_page(page)
+
+    time_lapsed = []
+    ist_time = []
+    format = "%d-%m-%Y %H:%M:%S"
+    for ticket in page_obj:
+        time_lapsed += [timeago.format(ticket.created_at, datetime.now().astimezone(tz=timezone.utc))]
+        ist_time += [ticket.created_at.astimezone(tz.gettz('ITC')).strftime(format)]
+
+    obj = zip(page_obj, time_lapsed, ist_time)
+
+    return render(request, 'list.html', {'obj': obj, 'page_obj': page_obj})
+
 
 def createTicket(request):
     if (request.user.is_authenticated):
@@ -27,7 +53,6 @@ def createTicket(request):
                 t = form.save(commit=False)
                 t.created_by = request.user
                 t.save()
-                # print(form.cleaned_data)
                 return redirect('/ticket/' + str(t.id))
             else:
                 messages.warning(request, "There was some problem with the form data.")
@@ -41,8 +66,33 @@ def createTicket(request):
     messages.warning(request, "You need to be logged in to create a ticket.")
     return redirect('/login')
 
+
 def ticketDetail(request, tid):
-    return HttpResponse('This is the ticket view for ticket with id ' + str(tid))
+    try:
+        ticket_obj = Ticket.objects.get(id=tid)
+    except:
+        messages.warning(request, "The requested ticket is not available or has been deleted.")
+        return redirect('/list')
+
+    if not request.user.is_authenticated:
+        messages.warning(request, "You need to be logged in to view the list.")
+        return redirect('/login')
+
+    if ticket_obj.created_by != request.user and ticket_obj.assigned_to != request.user:
+        messages.warning(request, "You are not authorised to view this ticket.")
+        return redirect('/list')
+
+    if request.method == 'POST':
+        form = TicketUpdateForm(instance=ticket_obj, data=request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Ticket has been updated.")
+            return redirect(request.path_info)
+
+    form = TicketUpdateForm(instance=ticket_obj)
+
+    return render(request, 'ticket_detail.html', {'form': form, 'ticket_obj': ticket_obj})
+
 
 def registerUser(request):
     if request.method == "POST":
@@ -58,6 +108,10 @@ def registerUser(request):
 
 
 def loginUser(request):
+    if request.user.is_authenticated:
+        messages.warning('You are already logged in. Logout to sign in as different user.')
+        return redirect('/')
+
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():

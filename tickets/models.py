@@ -39,8 +39,9 @@ class Ticket(models.Model):
     subject = models.CharField(
         'Subject', max_length=100,
     )
-    details = models.CharField(
-        'Details', max_length=500,
+    details = models.TextField(
+        'Details', max_length=1000,
+        blank=True
     )
     severity = models.IntegerField(
         'Severity', choices=SEVERITY_LEVELS,
@@ -60,7 +61,7 @@ class Ticket(models.Model):
     )
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL, models.PROTECT, verbose_name='Assigned to',
-        related_name='assigned_tickets', null=True, blank=True,
+        related_name='assigned_tickets', null=True, blank=False,
     )
 
     def __str__(self):

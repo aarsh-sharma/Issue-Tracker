@@ -25,7 +25,7 @@ class NewUserForm(UserCreationForm):
 class CreateTicketForm(forms.ModelForm):
     class Meta:
         model = Ticket
-        fields = ['subject', 'state', 'severity', 'issue_type']
+        fields = ['subject', 'state', 'severity', 'issue_type', 'assigned_to', 'details']
 
 
 class TicketUpdateForm(forms.ModelForm):

@@ -1,10 +1,29 @@
 # Issue Tracker
 
-## To Run
+## Clone the Project
+```sh
+$ git clone https://github.com/aarsh-sharma/Issue-Tracker
+$ cd Issue-Tracker
+```
 
-- Install required modules.
-- Make migrations using ```py manage.py makemigrations``` and then ```py manage.py migrate```
-- To run, use command ```py manage.py runserver```
+## To Run the Project
+Create a virtual environment to install dependencies in and activate it:
+
+
+```sh
+$ pip install virtualenv   # Ensure pip and python is installed on your system
+$ virtualenv env
+$ source env/bin/activate
+```
+
+Then install the dependencies:
+
+```sh
+(env)$ pip install -r requirements.txt    # Install all requirements
+(env)$ python manage.py makemigrations    # Make Database Migrations
+(env)$ python manage.py migrate           # Migrate Changes
+(env)$ python manage.py runserver         # Run Local Server
+```
 
 ## Instructions
 

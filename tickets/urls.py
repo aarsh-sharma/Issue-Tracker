@@ -11,4 +11,5 @@ urlpatterns = [
     path('register', registerUser, name='registerUser'),
     path('login', loginUser, name='loginUser'),
     path('logout', logoutUser, name='logoutUser'),
+    path('generate-excel/', exportTicketsAsExcel, name="generateExcel")
 ]

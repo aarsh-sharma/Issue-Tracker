@@ -1,4 +1,3 @@
-from django.http.response import HttpResponse
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from .forms import NewUserForm
@@ -7,7 +6,7 @@ from django.contrib import messages  # import messages
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.paginator import Paginator
 from django.db.models import Q
-
+import xlwt
 import timeago
 from dateutil import tz
 from datetime import datetime, timezone
@@ -15,21 +14,21 @@ from datetime import datetime, timezone
 from .forms import CreateTicketForm, TicketUpdateForm, CommentForm
 from .models import Ticket
 
+
 # Create your views here.
 
 def index(request):
-
     return render(request, 'index.html')
 
 
 def listTickets(request):
-
     if not request.user.is_authenticated:
         messages.warning(request, "You need to be logged in to view the list")
         return redirect('/login')
 
     page = request.GET.get('page', 1)
-    ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by('-created_at')
+    ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by(
+        '-created_at')
     paginator = Paginator(ticket_list, 10)
     page_obj = paginator.get_page(page)
 
@@ -46,10 +45,10 @@ def listTickets(request):
 
 
 def createTicket(request):
-    if (request.user.is_authenticated):
+    if request.user.is_authenticated:
         if request.method == "POST":
             form = CreateTicketForm(request.POST)
-            if (form.is_valid()):
+            if form.is_valid():
                 t = form.save(commit=False)
                 t.created_by = request.user
                 t.save()
@@ -123,14 +122,60 @@ def loginUser(request):
                 messages.success(request, f"You are now logged in as {username}.")
                 return redirect("/")
             else:
-                messages.error(request,"Invalid username or password.")
+                messages.error(request, "Invalid username or password.")
         else:
-            messages.error(request,"Invalid username or password.")
+            messages.error(request, "Invalid username or password.")
     form = AuthenticationForm()
-    return render(request=request, template_name="login.html", context={"login_form":form})
+    return render(request=request, template_name="login.html", context={"login_form": form})
+
 
 def logoutUser(request):
     logout(request)
     messages.info(request, "You have successfully logged out.")
     return redirect("/")
 
+
+def exportTicketsAsExcel(request):
+    if not request.user.is_authenticated:
+        messages.warning(request, "You need to be logged in to view the list")
+        return redirect('/login')
+    page = request.GET.get('page', 1)
+    ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by(
+        '-created_at')
+    paginator = Paginator(ticket_list, 10)
+    page_obj = paginator.get_page(page)
+
+    time_lapsed = []
+    ist_time = []
+    format = "%d-%m-%Y %H:%M:%S"
+    for ticket in page_obj:
+        time_lapsed += [timeago.format(ticket.created_at, datetime.now().astimezone(tz=timezone.utc))]
+        ist_time += [ticket.created_at.astimezone(tz.gettz('ITC')).strftime(format)]
+
+    obj = zip(page_obj, time_lapsed, ist_time)
+
+    response = HttpResponse(content_type='application/ms-excel')
+    filename = "issues"
+    response['Content-Disposition'] = f'attachment; filename="{filename}.xls"'
+    wb = xlwt.Workbook(encoding='utf-8')
+    ws = wb.add_sheet('LeaderBoard')
+    row_num = 0
+    font_style = xlwt.XFStyle()
+    font_style.font.bold = True
+    columns = ['S.no', 'Time Lapsed', 'Assigned To', 'Subject', 'Severity', 'State', 'Created By', 'Created at (IST)', 'Details']
+
+    for col_num in range(len(columns)):
+        ws.write(row_num, col_num, columns[col_num], font_style)
+    for ticket, time_elapsed, curr_time in obj:
+        row_num += 1
+        ws.write(row_num, 0, row_num, font_style)
+        ws.write(row_num, 1, time_elapsed, font_style)
+        ws.write(row_num, 2, ticket.assigned_to.username, font_style)
+        ws.write(row_num, 3, ticket.subject, font_style)
+        ws.write(row_num, 4, ticket.get_severity_display(), font_style)
+        ws.write(row_num, 5, ticket.get_state_display(), font_style)
+        ws.write(row_num, 6, ticket.created_by.username, font_style)
+        ws.write(row_num, 7, curr_time, font_style)
+        ws.write(row_num, 8, ticket.details, font_style)
+    wb.save(response)
+    return response

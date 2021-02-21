@@ -61,7 +61,6 @@ def boardView(request):
 
     if '' in grouped_dict: grouped_dict['Not Categorized'] += grouped_dict.pop('')
 
-    print(grouped_dict)
 
     temp_dict = {}
     for key, tickets in grouped_dict.items():
@@ -77,7 +76,6 @@ def boardView(request):
 
     grouped_dict = temp_dict
     del temp_dict
-    print(grouped_dict)
 
     return render(request, 'board_view.html', {'grouped_dict': grouped_dict, 'group_by': groups[group_by], 'sort_by': group_by})
 
@@ -92,7 +90,6 @@ def createTicket(request):
                 t.save()
                 return redirect('/ticket/' + str(t.id))
             else:
-                print(form)
                 messages.warning(request, "There was some problem with the form data.")
                 return redirect('/create')
 

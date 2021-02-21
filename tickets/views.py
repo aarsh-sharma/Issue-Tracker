@@ -12,7 +12,7 @@ from dateutil import tz
 from datetime import datetime, timezone
 
 from .forms import CreateTicketForm, TicketUpdateForm, CommentForm
-from .models import Ticket
+from .models import Ticket, STATES, SEVERITY_LEVELS, ISSUE_TYPE
 
 
 # Create your views here.
@@ -27,8 +27,7 @@ def listTickets(request):
         return redirect('/login')
 
     page = request.GET.get('page', 1)
-    ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by(
-        '-created_at')
+    ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by('-created_at')
     paginator = Paginator(ticket_list, 10)
     page_obj = paginator.get_page(page)
 
@@ -44,6 +43,45 @@ def listTickets(request):
     return render(request, 'list.html', {'obj': obj, 'page_obj': page_obj})
 
 
+def boardView(request):
+    if not request.user.is_authenticated:
+        messages.warning(request, "You need to be logged in to view the list")
+        return redirect('/login')
+
+    ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by('-created_at')
+
+    # Get from parameter how to group and group accordingly
+    groups = {'state': STATES, 'severity': SEVERITY_LEVELS, 'issue_type': ISSUE_TYPE}
+    group_by = request.GET.get('group_by', 'state')
+    grouped_dict = {}
+    for ticket in ticket_list:
+        if group_by == 'state': grouped_dict.setdefault(ticket.get_state_display(), []).append(ticket)
+        elif group_by == 'severity': grouped_dict.setdefault(ticket.get_severity_display(), []).append(ticket)
+        else: grouped_dict.setdefault(ticket.get_issue_type_display(), []).append(ticket)
+
+    if '' in grouped_dict: grouped_dict['Not Categorized'] += grouped_dict.pop('')
+
+    print(grouped_dict)
+
+    temp_dict = {}
+    for key, tickets in grouped_dict.items():
+        time_lapsed = []
+        ist_time = []
+        format = "%d-%m-%Y %H:%M:%S"
+        for ticket in tickets:
+            time_lapsed += [timeago.format(ticket.created_at, datetime.now().astimezone(tz=timezone.utc))]
+            ist_time += [ticket.created_at.astimezone(tz.gettz('ITC')).strftime(format)]
+        obj = zip(grouped_dict[key], time_lapsed, ist_time)
+
+        temp_dict[key] = obj
+
+    grouped_dict = temp_dict
+    del temp_dict
+    print(grouped_dict)
+
+    return render(request, 'board_view.html', {'grouped_dict': grouped_dict, 'group_by': groups[group_by], 'sort_by': group_by})
+
+
 def createTicket(request):
     if request.user.is_authenticated:
         if request.method == "POST":
@@ -54,6 +92,7 @@ def createTicket(request):
                 t.save()
                 return redirect('/ticket/' + str(t.id))
             else:
+                print(form)
                 messages.warning(request, "There was some problem with the form data.")
                 return redirect('/create')
 
@@ -85,6 +124,8 @@ def ticketDetail(request, tid):
         form = TicketUpdateForm(instance=ticket_obj, data=request.POST)
         if form.is_valid():
             form.save()
+            ticket_obj.created_at = datetime.now().astimezone(tz=timezone.utc)
+            ticket_obj.save()
             messages.success(request, "Ticket has been updated.")
             return redirect(request.path_info)
 
@@ -137,25 +178,23 @@ def logoutUser(request):
 
 def exportTicketsAsExcel(request):
     if not request.user.is_authenticated:
-        messages.warning(request, "You need to be logged in to view the list")
+        messages.warning(request, "You need to be logged in to use this feature.")
         return redirect('/login')
-    page = request.GET.get('page', 1)
+
     ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by(
         '-created_at')
-    paginator = Paginator(ticket_list, 10)
-    page_obj = paginator.get_page(page)
 
     time_lapsed = []
     ist_time = []
     format = "%d-%m-%Y %H:%M:%S"
-    for ticket in page_obj:
+    for ticket in ticket_list:
         time_lapsed += [timeago.format(ticket.created_at, datetime.now().astimezone(tz=timezone.utc))]
         ist_time += [ticket.created_at.astimezone(tz.gettz('ITC')).strftime(format)]
 
-    obj = zip(page_obj, time_lapsed, ist_time)
+    obj = zip(ticket_list, time_lapsed, ist_time)
 
     response = HttpResponse(content_type='application/ms-excel')
-    filename = "issues"
+    filename = "issues_"+ request.user.username
     response['Content-Disposition'] = f'attachment; filename="{filename}.xls"'
     wb = xlwt.Workbook(encoding='utf-8')
     ws = wb.add_sheet('LeaderBoard')
@@ -170,11 +209,11 @@ def exportTicketsAsExcel(request):
         row_num += 1
         ws.write(row_num, 0, row_num, font_style)
         ws.write(row_num, 1, time_elapsed, font_style)
-        ws.write(row_num, 2, ticket.assigned_to.username, font_style)
+        ws.write(row_num, 2, str(ticket.assigned_to), font_style)
         ws.write(row_num, 3, ticket.subject, font_style)
         ws.write(row_num, 4, ticket.get_severity_display(), font_style)
         ws.write(row_num, 5, ticket.get_state_display(), font_style)
-        ws.write(row_num, 6, ticket.created_by.username, font_style)
+        ws.write(row_num, 6, str(ticket.created_by), font_style)
         ws.write(row_num, 7, curr_time, font_style)
         ws.write(row_num, 8, ticket.details, font_style)
     wb.save(response)

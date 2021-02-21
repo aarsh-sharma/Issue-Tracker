@@ -17,6 +17,7 @@ SEVERITY_LEVELS = [
     (3, 'Major'),
     (2, 'Minor'),
     (1, 'Trivial'),
+    (-1, 'Not Categorized')
 ]
 
 ISSUE_TYPE = [
@@ -24,7 +25,8 @@ ISSUE_TYPE = [
     ('NEW', 'New Feature'),
     ('BUG', 'Bug'),
     ('TST', 'Test'),
-    ('TSK', 'Task')
+    ('TSK', 'Task'),
+    ('NOT', 'Not Categorized')
 ]
 
 
@@ -45,11 +47,11 @@ class Ticket(models.Model):
     )
     severity = models.IntegerField(
         'Severity', choices=SEVERITY_LEVELS,
-        null=True, blank=True,
+        null=True, default=-1,
     )
     issue_type = models.CharField(
         'Issue Type', max_length=16, choices=ISSUE_TYPE,
-        null=False, blank=True
+        null=False, default='NOT'
     )
     state = models.CharField(
         'State', max_length=16, choices=STATES,
@@ -61,7 +63,7 @@ class Ticket(models.Model):
     )
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL, models.PROTECT, verbose_name='Assigned to',
-        related_name='assigned_tickets', null=True, blank=False,
+        related_name='assigned_tickets', null=True, blank=True,
     )
 
     def __str__(self):

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Board View{% endblock title %}
+
+{% block content %}
+
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'tickets/css/board_view.css' %}">
+
+<div class="ui mt-3">
+	<nav class="navbar-bv app">Issue Board</nav>
+	<nav class="navbar-bv board">
+    Sort By:
+    {% if sort_by == 'state' %}
+      <a class="btn btn-warning ms-2" href="?group_by=state">State</a>
+      <a class="btn btn-outline-warning ms-2" href="?group_by=severity">Severity</a>
+      <a class="btn btn-outline-warning ms-2" href="?group_by=issue_type">Issue Type</a>
+      {% elif sort_by == 'severity' %}
+      <a class="btn btn-outline-warning ms-2" href="?group_by=state">State</a>
+      <a class="btn btn-warning ms-2" href="?group_by=severity">Severity</a>
+      <a class="btn btn-outline-warning ms-2" href="?group_by=issue_type">Issue Type</a>
+      {% else %}
+      <a class="btn btn-outline-warning ms-2" href="?group_by=state">State</a>
+      <a class="btn btn-outline-warning ms-2" href="?group_by=severity">Severity</a>
+      <a class="btn btn-warning ms-2" href="?group_by=issue_type">Issue Type</a>
+    {% endif %}
+  </nav>
+	<div class="lists mt-3">
+
+    {% for _, type in group_by %}
+      <div class="list">
+        <header>{{ type }}</header>
+        <ul class="ul-bv">
+          {% for key, tickets in grouped_dict.items %}
+            {% if key == type %}
+              {% for ticket, time_lapsed, ist_time in tickets %}
+                <li class="li-bv">
+                  <div class="card bg-light">
+                    <div class="card-body">
+                      <h5 class="card-title"><strong>Title: </strong>{{ ticket.subject }}</h5>
+                      {% if ticket.details %}
+                        <p class="card-text"><strong>Details: </strong>{{ ticket.details }}</p>
+                      {% endif %}
+                      <p class="card-text"><small class="text-muted">Last updated {{ time_lapsed }}</small></p>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                      <li class="list-group-item"><strong>Assigned To: </strong>{{ ticket.assigned_to }}</li>
+                      <li class="list-group-item"><strong>Created By: </strong>{{ ticket.created_by }}</li>
+                      <li class="list-group-item"><strong>Created At: </strong>{{ ist_time }}</li>
+                    </ul>
+                    <div class="card-body">
+                      <a class="btn btn-outline-primary btn-sm" href="{% url 'ticketDetail' tid=ticket.id %}">Edit</a>
+                    </div>
+                  </div>
+                </li>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+        </ul>
+        <footer><a class="btn btn-sm" href="/create">Add a ticket...</a></footer>
+      </div>
+    {% endfor %}
+
+	</div>
+</div>
+
+{% endblock %}

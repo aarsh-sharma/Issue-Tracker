@@ -14,6 +14,7 @@
             <th scope="col">Subject</th>
             <th scope="col">Severity</th>
             <th scope="col">State</th>
+            <th scope="col">Issue Type</th>
             <th scope="col">Created By</th>
             <th scope="col">Created at (IST)</th>
         </tr>
@@ -24,9 +25,9 @@
                 <td>{{ time_elapsed }}</td>
                 <td>{{ ticket.assigned_to }}</td>
                 <td><a href="{% url 'ticketDetail' tid=ticket.id %}">{{ ticket.subject }}</a></td>
-                <td>{{ ticket.get_severity_display|default:"&mdash;" }}</td>
-                <td>{{ ticket.get_state_display }}{% if ticket.other_ticket %} (#{{ ticket.other_ticket.id }}
-                    ){% endif %}</td>
+                <td>{{ ticket.get_severity_display }}</td>
+                <td>{{ ticket.get_state_display }}{% if ticket.other_ticket %} (#{{ ticket.other_ticket.id }}){% endif %}</td>
+                <td>{{ ticket.get_issue_type_display }}</td>
                 <td>{{ ticket.created_by }}</td>
                 <td>{{ curr_time }}</td>
             </tr>
@@ -46,7 +47,7 @@
 
         {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
-                <a class="btn btn-info mb-4" href="?page={{ num }}">{{ num }}</a>
+                <a class="btn btn-primary mb-4" href="?page={{ num }}">{{ num }}</a>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                 <a class="btn btn-outline-info mb-4" href="?page={{ num }}">{{ num }}</a>
             {% endif %}

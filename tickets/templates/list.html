@@ -20,7 +20,7 @@
         </tr>
         </thead>
         <tbody>
-        {% for ticket, time_elapsed, curr_time in obj %}
+        {% for ticket, time_elapsed in obj %}
             <tr>
                 <td>{{ time_elapsed }}</td>
                 <td>{{ ticket.assigned_to }}</td>
@@ -29,7 +29,7 @@
                 <td>{{ ticket.get_state_display }}{% if ticket.other_ticket %} (#{{ ticket.other_ticket.id }}){% endif %}</td>
                 <td>{{ ticket.get_issue_type_display }}</td>
                 <td>{{ ticket.created_by }}</td>
-                <td>{{ curr_time }}</td>
+                <td>{{ ticket.created_at }}</td>
             </tr>
         {% empty %}
             <tr>

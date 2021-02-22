@@ -9,13 +9,11 @@ from django.db.models import Q
 import xlwt
 import timeago
 from dateutil import tz
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 
 from .forms import CreateTicketForm, TicketUpdateForm, CommentForm
-from .models import Ticket, STATES, SEVERITY_LEVELS, ISSUE_TYPE
+from .models import Ticket, Comment, STATES, SEVERITY_LEVELS, ISSUE_TYPE
 
-
-# Create your views here.
 
 def index(request):
     return render(request, 'index.html')
@@ -32,13 +30,10 @@ def listTickets(request):
     page_obj = paginator.get_page(page)
 
     time_lapsed = []
-    ist_time = []
-    format = "%d-%m-%Y %H:%M:%S"
     for ticket in page_obj:
         time_lapsed += [timeago.format(ticket.created_at, datetime.now().astimezone(tz=timezone.utc))]
-        ist_time += [ticket.created_at.astimezone(tz.gettz('ITC')).strftime(format)]
 
-    obj = zip(page_obj, time_lapsed, ist_time)
+    obj = zip(page_obj, time_lapsed)
 
     return render(request, 'list.html', {'obj': obj, 'page_obj': page_obj})
 
@@ -48,7 +43,7 @@ def boardView(request):
         messages.warning(request, "You need to be logged in to view the list")
         return redirect('/login')
 
-    ticket_list = Ticket.objects.all().filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by('-created_at')
+    ticket_list = Ticket.objects.filter(Q(created_by=request.user) | Q(assigned_to=request.user)).order_by('-created_at')
 
     # Get from parameter how to group and group accordingly
     groups = {'state': STATES, 'severity': SEVERITY_LEVELS, 'issue_type': ISSUE_TYPE}
@@ -59,19 +54,13 @@ def boardView(request):
         elif group_by == 'severity': grouped_dict.setdefault(ticket.get_severity_display(), []).append(ticket)
         else: grouped_dict.setdefault(ticket.get_issue_type_display(), []).append(ticket)
 
-    if '' in grouped_dict: grouped_dict['Not Categorized'] += grouped_dict.pop('')
-
 
     temp_dict = {}
     for key, tickets in grouped_dict.items():
         time_lapsed = []
-        ist_time = []
-        format = "%d-%m-%Y %H:%M:%S"
         for ticket in tickets:
             time_lapsed += [timeago.format(ticket.created_at, datetime.now().astimezone(tz=timezone.utc))]
-            ist_time += [ticket.created_at.astimezone(tz.gettz('ITC')).strftime(format)]
-        obj = zip(grouped_dict[key], time_lapsed, ist_time)
-
+        obj = zip(grouped_dict[key], time_lapsed)
         temp_dict[key] = obj
 
     grouped_dict = temp_dict
@@ -105,6 +94,7 @@ def createTicket(request):
 def ticketDetail(request, tid):
     try:
         ticket_obj = Ticket.objects.get(id=tid)
+        comments = Comment.objects.filter(ticket=ticket_obj).order_by('-created_at')
     except:
         messages.warning(request, "The requested ticket is not available or has been deleted.")
         return redirect('/list')
@@ -118,17 +108,29 @@ def ticketDetail(request, tid):
         return redirect('/list')
 
     if request.method == 'POST':
-        form = TicketUpdateForm(instance=ticket_obj, data=request.POST)
-        if form.is_valid():
-            form.save()
+        ticket_form = TicketUpdateForm(instance=ticket_obj, data=request.POST)
+        comment_form = CommentForm(data=request.POST)
+
+        if request.POST.get('form_type') == 'update' and ticket_form.is_valid():
+            ticket_form.save()
             ticket_obj.created_at = datetime.now().astimezone(tz=timezone.utc)
             ticket_obj.save()
             messages.success(request, "Ticket has been updated.")
             return redirect(request.path_info)
 
-    form = TicketUpdateForm(instance=ticket_obj)
+        if request.POST.get('form_type') == 'comment' and comment_form.is_valid():
+            comment = comment_form.save(commit=False)
+            comment.created_by = request.user
+            comment.created_at = datetime.now().astimezone(tz=timezone.utc)
+            comment.ticket = ticket_obj
+            comment.save()
 
-    return render(request, 'ticket_detail.html', {'form': form, 'ticket_obj': ticket_obj})
+
+    ticket_form = TicketUpdateForm(instance=ticket_obj)
+    comment_form = CommentForm(instance=ticket_obj)
+
+
+    return render(request, 'ticket_detail.html', {'ticket_form': ticket_form, 'comment_form': comment_form, 'ticket_obj': ticket_obj, 'comments': comments})
 
 
 def registerUser(request):
@@ -168,6 +170,10 @@ def loginUser(request):
 
 
 def logoutUser(request):
+    if not request.user.is_authenticated:
+        messages.warning('You are not logged in.')
+        return redirect('/login')
+
     logout(request)
     messages.info(request, "You have successfully logged out.")
     return redirect("/")
@@ -182,13 +188,10 @@ def exportTicketsAsExcel(request):
         '-created_at')
 
     time_lapsed = []
-    ist_time = []
-    format = "%d-%m-%Y %H:%M:%S"
     for ticket in ticket_list:
         time_lapsed += [timeago.format(ticket.created_at, datetime.now().astimezone(tz=timezone.utc))]
-        ist_time += [ticket.created_at.astimezone(tz.gettz('ITC')).strftime(format)]
 
-    obj = zip(ticket_list, time_lapsed, ist_time)
+    obj = zip(ticket_list, time_lapsed)
 
     response = HttpResponse(content_type='application/ms-excel')
     filename = "issues_"+ request.user.username
@@ -202,7 +205,7 @@ def exportTicketsAsExcel(request):
 
     for col_num in range(len(columns)):
         ws.write(row_num, col_num, columns[col_num], font_style)
-    for ticket, time_elapsed, curr_time in obj:
+    for ticket, time_elapsed in obj:
         row_num += 1
         ws.write(row_num, 0, row_num, font_style)
         ws.write(row_num, 1, time_elapsed, font_style)
@@ -211,7 +214,7 @@ def exportTicketsAsExcel(request):
         ws.write(row_num, 4, ticket.get_severity_display(), font_style)
         ws.write(row_num, 5, ticket.get_state_display(), font_style)
         ws.write(row_num, 6, str(ticket.created_by), font_style)
-        ws.write(row_num, 7, curr_time, font_style)
+        ws.write(row_num, 7, ticket.created_at, font_style)
         ws.write(row_num, 8, ticket.details, font_style)
     wb.save(response)
     return response

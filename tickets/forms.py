@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Ticket
+from .models import Ticket, Comment
 
 
 # Create your forms here.
@@ -34,11 +34,8 @@ class TicketUpdateForm(forms.ModelForm):
         fields = ['state', 'severity', 'issue_type', 'details', 'assigned_to']
 
 
-class CommentForm(forms.Form):
-    body = forms.CharField(widget=forms.Textarea, required=False, label='')
+class CommentForm(forms.ModelForm):
 
-    def clean_body(self):
-        value = self.cleaned_data.get('body', '').strip()
-        if value == '':
-            raise forms.ValidationError("Empty comment.")
-        return value
+    class Meta:
+        model = Comment
+        fields = ['body']

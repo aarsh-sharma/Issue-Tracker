@@ -1,19 +1,42 @@
 {% extends "base.html" %}
 
-{% block title %}Login{% endblock title %}
+{% block title %}Ticket Detail{% endblock title %}
 
 {% block content %}
 
 {% load crispy_forms_tags %}
 
-<div class="container mt-2">
-  <h1>{{ ticket_obj.subject }}</h1>
-  <form method="POST">
-    {% csrf_token %}
-    {{ form|crispy }}
-    <br />
-    <button class="btn btn-primary" type="submit">Save</button>
-  </form>
+<div class="container mt-2 row">
+
+  <div class="col-sm-6">
+    <h1>{{ ticket_obj.subject }}</h1>
+    <form method="POST">
+      {% csrf_token %}
+      {{ ticket_form|crispy }}
+      <br />
+      <button class="btn btn-primary" name="form_type" value="update" type="submit">Save</button>
+    </form>
+  </div>
+
+  <div class="col-sm-6">
+
+    {% for comment in comments%}
+      <div>
+        <p>{{ comment.created_by }}</p>
+        <p>{{ comment.created_at }}</p>
+        <p>{{ comment.body }}</p>
+      </div>
+    {% endfor %}
+
+    <h1>Add Comments</h1>
+    <form method="post">
+      {% csrf_token %}
+      {{ comment_form|crispy }}
+      <br />
+      <button class="btn btn-primary" name="form_type" value="comment" type="submit">Add Comment</button>
+    </form>
+  </div>
+
 </div>
 
 {% endblock %}

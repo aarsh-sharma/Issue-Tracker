@@ -69,23 +69,12 @@ class Ticket(models.Model):
     def __str__(self):
         return '#{0}: {1}'.format(self.id, self.subject)
 
-    def blocked_tickets(self):
-        return self.related.filter(state='Blocked')
-
-    def merged_tickets(self):
-        return self.related.filter(state='Merged')
-
-    def update(self, **kwargs):
-        self.severity = kwargs.get('severity', self.severity)
-        self.state = kwargs.get('state', self.state)
-        self.save()
-
     class Meta:
         verbose_name = 'Ticket'
         verbose_name_plural = 'Tickets'
 
 
-class TicketComments(models.Model):
+class Comment(models.Model):
     ticket = models.ForeignKey(
         Ticket, models.CASCADE, verbose_name='Ticket', related_name='entries'
     )
@@ -95,10 +84,10 @@ class TicketComments(models.Model):
     created_at = models.DateTimeField(
         'Created at', auto_now_add=True,
     )
-    body = models.CharField(
+    body = models.TextField(
         'Body', max_length=1000,
     )
 
     class Meta:
-        verbose_name = 'TicketComment'
-        verbose_name_plural = 'TicketComments'
+        verbose_name = 'Comment'
+        verbose_name_plural = 'Comments'

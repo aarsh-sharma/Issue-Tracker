@@ -33,7 +33,7 @@
         <ul class="ul-bv">
           {% for key, tickets in grouped_dict.items %}
             {% if key == type %}
-              {% for ticket, time_lapsed, ist_time in tickets %}
+              {% for ticket, time_lapsed in tickets %}
                 <li class="li-bv">
                   <div class="card bg-light">
                     <div class="card-body">
@@ -46,7 +46,7 @@
                     <ul class="list-group list-group-flush">
                       <li class="list-group-item"><strong>Assigned To: </strong>{{ ticket.assigned_to }}</li>
                       <li class="list-group-item"><strong>Created By: </strong>{{ ticket.created_by }}</li>
-                      <li class="list-group-item"><strong>Created At: </strong>{{ ist_time }}</li>
+                      <li class="list-group-item"><strong>Created At: </strong>{{ ticket.created_at }}</li>
                     </ul>
                     <div class="card-body">
                       <a class="btn btn-outline-primary btn-sm" href="{% url 'ticketDetail' tid=ticket.id %}">Edit</a>
